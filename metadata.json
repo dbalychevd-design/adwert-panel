@@ -1,0 +1,6 @@
+{
+  "name": "MARSHALL",
+  "description": "MARSHALL Outbound Dialogue and Campaign Management Platform",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
