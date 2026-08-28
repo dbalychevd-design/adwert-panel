@@ -68,6 +68,7 @@ import { QuoteNodeItem } from './components/QuoteNodeItem';
 export default function App() {
   // Navigation State
   const [activePage, setActivePage] = useState<'inbox' | 'stats' | 'ai' | 'activity' | 'settings'>('inbox');
+  const [activeNav, setActiveNav] = useState<'inbox' | 'overview' | 'campaigns' | 'automode' | 'templates' | 'rules' | 'stats' | 'settings'>('inbox');
 
   // Inbox & Conversation State
   const [chats, setChats] = useState<Chat[]>(INITIAL_CHATS);
@@ -363,6 +364,14 @@ export default function App() {
     return bestId;
   }, [sentCampaigns]);
 
+  // Attention state for Overview
+  const unreadCount = useMemo(() => chats.filter((c) => c.unread).length, [chats]);
+  const attentionChats = useMemo(() => chats.filter((c) => c.unread), [chats]);
+  const attentionCampaigns = useMemo(() => {
+    const avgRate = totalSent > 0 ? totalReplied / totalSent : 0;
+    return campaigns.filter((c) => c.sent > 0 && (c.replied / c.sent) < avgRate);
+  }, [campaigns, totalSent, totalReplied]);
+
   // Filtered campaigns
   const filteredCampaigns = useMemo(() => {
     if (campaignFilter === 'active') {
@@ -463,7 +472,10 @@ export default function App() {
       // Ctrl/Cmd + K -> Focus Search
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        if (activePage !== 'inbox') setActivePage('inbox');
+        if (activePage !== 'inbox') {
+          setActivePage('inbox');
+          setActiveNav('inbox');
+        }
         setTimeout(() => searchInputRef.current?.focus(), 50);
       }
       // Escape -> Close Dropdowns
@@ -716,7 +728,7 @@ export default function App() {
   const showWallpaperCard = Boolean(conversationWallpaperUrl) && isWidescreen && activePage === 'inbox';
 
   return (
-    <div className={`app-canvas ${isMobileConversation ? 'mobile-view-chat' : ''}`}>
+    <div className={`desktop-shell ${isMobileConversation ? 'mobile-view-chat' : ''}`}>
       {/* Hidden Native File Input for Background Upload */}
       <input
         ref={conversationFileInputRef}
@@ -727,104 +739,264 @@ export default function App() {
       />
 
       {/* ===================================================================== */}
-      {/* 1. LEFT APPLE DOCK (Narrow 58px rounded panel)                        */}
+      {/* 1. LINEAR-INSPIRED WIDE TEXT SIDEBAR (248px)                          */}
       {/* ===================================================================== */}
-      <nav className="apple-dock apple-panel">
-        {/* Top: MARSHALL 'M' Button */}
-        <div className="flex flex-col items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setActivePage('inbox')}
-            className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#007aff] to-[#005bb5] text-white flex items-center justify-center font-bold text-sm shadow-sm cursor-pointer"
-            title="MARSHALL Home"
-          >
-            M
-          </button>
-          <div className="w-6 h-[1px] bg-black/10 dark:bg-white/10 my-0.5"></div>
+      <aside className="app-sidebar">
+        {/* Top Window Rhythm (Decorative Circles: Red, Amber, Green) */}
+        <div className="sidebar-dots-header" aria-hidden="true">
+          <span className="sidebar-dot sidebar-dot-red" />
+          <span className="sidebar-dot sidebar-dot-amber" />
+          <span className="sidebar-dot sidebar-dot-green" />
         </div>
 
-        {/* Center: Navigation Items */}
-        <div className="flex flex-col items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setActivePage('inbox')}
-            className={`dock-item ds-icon-button ${activePage === 'inbox' ? 'active ds-nav-row-active' : ''}`}
-            title={t.inbox}
-          >
-            <InboxIcon className="w-5 h-5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActivePage('stats')}
-            className={`dock-item ds-icon-button ${activePage === 'stats' ? 'active ds-nav-row-active' : ''}`}
-            title={t.stats}
-          >
-            <BarChart3 className="w-5 h-5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActivePage('ai')}
-            className={`dock-item ds-icon-button ${activePage === 'ai' ? 'active' : ''}`}
-            title={t.aiAssistant}
-          >
-            <Bot className="w-5 h-5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActivePage('activity')}
-            className={`dock-item ds-icon-button ${activePage === 'activity' ? 'active' : ''}`}
-            title={t.activity}
-          >
-            <Activity className="w-5 h-5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActivePage('settings')}
-            className={`dock-item ds-icon-button ${activePage === 'settings' ? 'active' : ''}`}
-            title={t.settings}
-          >
-            <SlidersHorizontal className="w-5 h-5" />
-          </button>
+        {/* Brand Row */}
+        <div className="sidebar-brand-row">
+          <div className="sidebar-brand-mark">M</div>
+          <span className="sidebar-brand-title">MARSHALL</span>
         </div>
 
-        {/* Bottom: Toggles & User Avatar */}
-        <div className="flex flex-col items-center gap-2">
-          {/* Language Toggle */}
-          <button
-            type="button"
-            onClick={() => setLang(lang === 'en' ? 'ru' : 'en')}
-            className="dock-item ds-icon-button text-[10px] font-mono font-bold"
-            title={t.langToggle}
-          >
-            {lang.toUpperCase()}
-          </button>
+        {/* Compact Search Launcher */}
+        <button
+          type="button"
+          onClick={() => {
+            if (activePage !== 'inbox') {
+              setActivePage('inbox');
+              setActiveNav('inbox');
+            }
+            setTimeout(() => searchInputRef.current?.focus(), 60);
+          }}
+          className="sidebar-search-launcher"
+          title={`${t.searchLauncher} (⌘K)`}
+        >
+          <div className="flex items-center gap-2">
+            <Search className="w-3.5 h-3.5" />
+            <span>{t.searchLauncher}</span>
+          </div>
+          <kbd className="sidebar-kbd-hint">{t.searchHint}</kbd>
+        </button>
 
-          {/* Theme Toggle */}
-          <button
-            type="button"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="dock-item ds-icon-button"
-            title={t.themeToggle}
-          >
-            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
+        {/* Navigation Items in Structured Groups */}
+        <div className="sidebar-scroll-area">
+          {/* WORKSPACE */}
+          <div className="sidebar-group">
+            <div className="sidebar-group-label">{t.groupWorkspace}</div>
 
-          {/* User Initials Avatar */}
-          <div
-            className="w-7 h-7 rounded-full bg-zinc-700 dark:bg-zinc-800 text-zinc-100 dark:text-zinc-200 flex items-center justify-center text-[10px] font-semibold select-none border border-black/10 dark:border-white/10"
-            title="Alexey Marshall (You)"
-          >
-            AM
+            <button
+              type="button"
+              onClick={() => {
+                setActivePage('inbox');
+                setActiveNav('inbox');
+              }}
+              className={`sidebar-nav-item ${activeNav === 'inbox' && activePage === 'inbox' ? 'active' : ''}`}
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <InboxIcon className="sidebar-nav-icon" />
+                <span className="truncate">{t.navInbox}</span>
+              </div>
+              {unreadCount > 0 && (
+                <span className="sidebar-badge-count">{unreadCount}</span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActivePage('activity');
+                setActiveNav('overview');
+              }}
+              className={`sidebar-nav-item ${activeNav === 'overview' && activePage === 'activity' ? 'active' : ''}`}
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <Layers className="sidebar-nav-icon" />
+                <span className="truncate">{t.navOverview}</span>
+              </div>
+            </button>
+          </div>
+
+          {/* OPERATIONS */}
+          <div className="sidebar-group">
+            <div className="sidebar-group-label">{t.groupOperations}</div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActivePage('stats');
+                setActiveNav('campaigns');
+              }}
+              className={`sidebar-nav-item ${activeNav === 'campaigns' && activePage === 'stats' ? 'active' : ''}`}
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <Target className="sidebar-nav-icon" />
+                <span className="truncate">{t.navCampaigns}</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActivePage('ai');
+                setActiveNav('automode');
+              }}
+              className={`sidebar-nav-item ${activeNav === 'automode' && activePage === 'ai' ? 'active' : ''}`}
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <Bot className="sidebar-nav-icon" />
+                <span className="truncate">{t.navAutomode}</span>
+              </div>
+            </button>
+          </div>
+
+          {/* LIBRARY */}
+          <div className="sidebar-group">
+            <div className="sidebar-group-label">{t.groupLibrary}</div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActivePage('ai');
+                setActiveAiSection('playbook');
+                setActiveNav('templates');
+              }}
+              className={`sidebar-nav-item ${activeNav === 'templates' && activePage === 'ai' && activeAiSection === 'playbook' ? 'active' : ''}`}
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <FileText className="sidebar-nav-icon" />
+                <span className="truncate">{t.navTemplates}</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActivePage('ai');
+                setActiveAiSection('rules');
+                setActiveNav('rules');
+              }}
+              className={`sidebar-nav-item ${activeNav === 'rules' && activePage === 'ai' && activeAiSection === 'rules' ? 'active' : ''}`}
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <Sliders className="sidebar-nav-icon" />
+                <span className="truncate">{t.navRules}</span>
+              </div>
+            </button>
+          </div>
+
+          {/* INSIGHTS */}
+          <div className="sidebar-group">
+            <div className="sidebar-group-label">{t.groupInsights}</div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActivePage('stats');
+                setActiveNav('stats');
+              }}
+              className={`sidebar-nav-item ${activeNav === 'stats' && activePage === 'stats' ? 'active' : ''}`}
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <BarChart3 className="sidebar-nav-icon" />
+                <span className="truncate">{t.navStatistics}</span>
+              </div>
+            </button>
           </div>
         </div>
-      </nav>
+
+        {/* Separated Bottom Area */}
+        <div className="sidebar-footer">
+          {/* Settings Nav Item */}
+          <button
+            type="button"
+            onClick={() => {
+              setActivePage('settings');
+              setActiveNav('settings');
+            }}
+            className={`sidebar-nav-item ${activeNav === 'settings' && activePage === 'settings' ? 'active' : ''}`}
+          >
+            <div className="flex items-center gap-2.5 truncate">
+              <SlidersHorizontal className="sidebar-nav-icon" />
+              <span className="truncate">{t.navSettings}</span>
+            </div>
+          </button>
+
+          {/* Truthful Automode Status */}
+          <div className="sidebar-status-indicator" title="Local preview state">
+            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500" />
+            <span className="truncate">{t.automodeDraftStatus}</span>
+          </div>
+
+          {/* User Row & Mode Switches */}
+          <div className="sidebar-user-row">
+            <div className="flex items-center gap-2 min-w-0">
+              <div
+                className="w-6 h-6 rounded-full bg-zinc-700 dark:bg-zinc-800 text-zinc-100 dark:text-zinc-200 flex items-center justify-center text-[10px] font-semibold select-none border border-black/10 dark:border-white/10 flex-shrink-0"
+                title="Alexey Marshall (You)"
+              >
+                AM
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-medium text-[var(--ds-sidebar-text)] truncate">Alexey</span>
+                <span className="text-[10px] text-[var(--ds-sidebar-text-muted)] truncate">{t.userProfileRole}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setLang(lang === 'en' ? 'ru' : 'en')}
+                className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-mono font-bold text-[var(--ds-sidebar-text-muted)] hover:text-[var(--ds-sidebar-text)] hover:bg-[var(--ds-sidebar-item-hover)] transition-colors cursor-pointer"
+                title={t.langToggle}
+              >
+                {lang.toUpperCase()}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="w-7 h-7 rounded-md flex items-center justify-center text-[var(--ds-sidebar-text-muted)] hover:text-[var(--ds-sidebar-text)] hover:bg-[var(--ds-sidebar-item-hover)] transition-colors cursor-pointer"
+                title={t.themeToggle}
+              >
+                {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
 
       {/* ===================================================================== */}
-      {/* 2. INBOX WORKSPACE (Middle Inbox Panel + Right Conversation Panel)     */}
+      {/* 2. MAIN WORKSPACE WITH THIN TOP CHROME                                 */}
+      {/* ===================================================================== */}
+      <div className="main-workspace-shell">
+        <header className="workspace-top-chrome">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="workspace-view-title">
+              {activePage === 'inbox'
+                ? t.navInbox
+                : activePage === 'activity'
+                ? t.navOverview
+                : activePage === 'stats'
+                ? activeNav === 'stats'
+                  ? t.navStatistics
+                  : t.navCampaigns
+                : activePage === 'ai'
+                ? activeNav === 'templates'
+                  ? t.navTemplates
+                  : activeNav === 'rules'
+                  ? t.navRules
+                  : t.navAutomode
+                : t.navSettings}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-mono text-[var(--ds-sidebar-text-muted)]">
+              {t.version}
+            </span>
+          </div>
+        </header>
+
+        <div className="workspace-content-body">
+      {/* ===================================================================== */}
+      {/* 2.1 INBOX WORKSPACE (Middle Inbox Panel + Right Conversation Panel)   */}
       {/* ===================================================================== */}
       {activePage === 'inbox' && (
         <>
@@ -4472,43 +4644,105 @@ export default function App() {
         </div>
       )}
 
-      {/* 3.3 ACTIVITY FEED PAGE */}
+      {/* 3.3 OVERVIEW ROUTE — ATTENTION-FIRST TRANSITIONAL VIEW */}
       {activePage === 'activity' && (
         <section className="secondary-panel apple-panel ds-page-transition">
-          <div className="secondary-panel-inner space-y-6">
+          <div className="secondary-panel-inner space-y-6 max-w-4xl mx-auto w-full">
             <div className="secondary-page-header flex items-center justify-between">
               <div>
-                <h2 className="secondary-page-title ds-panel-heading">{t.activityFeed}</h2>
+                <h2 className="secondary-page-title ds-panel-heading">{t.overviewTitle}</h2>
                 <p className="secondary-page-subtitle">
-                  Real-time chronological events from all outbound channels
+                  {t.overviewSubtitle}
                 </p>
               </div>
-              <span className="text-xs font-mono" style={{ color: 'var(--secondary-text-muted)' }}>Last event: 2 mins ago</span>
             </div>
 
-            {/* Activity Timeline */}
-            <div className="space-y-3">
-              {MOCK_ACTIVITIES.map((act) => (
-                <div
-                  key={act.id}
-                  className="secondary-surface ds-card p-4 flex items-start gap-3.5"
-                >
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center flex-none font-bold text-xs" style={{ backgroundColor: 'rgba(0, 122, 255, 0.12)', color: 'var(--secondary-blue)' }}>
-                    {act.leadName.charAt(0)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold" style={{ color: 'var(--secondary-text)' }}>
-                        {act.leadName}
-                      </span>
-                      <span className="text-xs font-mono" style={{ color: 'var(--secondary-text-muted)' }}>{act.time}</span>
-                    </div>
-                    <p className="secondary-supporting-text text-sm mt-0.5">
-                      {act.description}
-                    </p>
-                  </div>
+            {/* Metric line: Reply conversion this week */}
+            <div className="secondary-surface ds-card p-4 flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-[var(--secondary-text)]">{t.replyConversionThisWeek}</div>
+                <div className="text-xs text-[var(--secondary-text-secondary)]">{t.formulaNote}</div>
+              </div>
+              <div className="text-xl font-mono font-bold text-[var(--secondary-blue)]">
+                {aggregateReplyRateStr}
+              </div>
+            </div>
+
+            {/* Needs Attention Section */}
+            <div className="secondary-section">
+              <h3 className="secondary-section-title">{t.needsAttention}</h3>
+
+              {attentionChats.length === 0 && attentionCampaigns.length === 0 ? (
+                <div className="secondary-surface ds-card p-6 text-center text-xs text-[var(--secondary-text-muted)]">
+                  {t.noAttentionItems}
                 </div>
-              ))}
+              ) : (
+                <div className="space-y-2.5">
+                  {/* Unread Chats requiring attention */}
+                  {attentionChats.map((chat) => (
+                    <div
+                      key={chat.id}
+                      onClick={() => {
+                        handleSelectChat(chat.id);
+                        setActivePage('inbox');
+                        setActiveNav('inbox');
+                      }}
+                      className="secondary-surface ds-card p-3.5 flex items-center justify-between cursor-pointer hover:border-[var(--secondary-blue)] transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-blue-500/15 text-[#007aff] flex items-center justify-center font-bold text-xs flex-shrink-0">
+                          {chat.initials}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-[var(--secondary-text)] truncate">{chat.leadName}</span>
+                            <span className="text-xs text-[var(--secondary-text-muted)] font-mono">{chat.date}</span>
+                          </div>
+                          <p className="text-xs text-[var(--secondary-text-secondary)] truncate mt-0.5">
+                            {chat.subject}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-xs text-[var(--secondary-blue)] font-medium flex-shrink-0">
+                        {t.viewThread} →
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Campaigns requiring attention */}
+                  {attentionCampaigns.map((camp) => (
+                    <div
+                      key={camp.id}
+                      onClick={() => {
+                        setSelectedCampaignId(camp.id);
+                        setActivePage('stats');
+                        setActiveNav('campaigns');
+                      }}
+                      className="secondary-surface ds-card p-3.5 flex items-center justify-between cursor-pointer hover:border-[var(--secondary-amber)] transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-500 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                          <Target className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-[var(--secondary-text)] truncate">{camp.name}</span>
+                            <span className="secondary-badge ds-pill ds-status-pill secondary-badge-amber ds-pill-amber text-[10px]">
+                              {t.filterNeedsAttention}
+                            </span>
+                          </div>
+                          <p className="text-xs text-[var(--secondary-text-secondary)] truncate mt-0.5">
+                            {camp.replied} {t.replied} / {camp.sent} {t.sent} ({(camp.sent > 0 ? (camp.replied / camp.sent) * 100 : 0).toFixed(1)}%)
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-xs text-[var(--secondary-amber)] font-medium flex-shrink-0">
+                        {t.viewCampaign} →
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -4660,6 +4894,8 @@ export default function App() {
           </div>
         </section>
       )}
+        </div>
+      </div>
 
       {/* ===================================================================== */}
       {/* 4. NEW CAMPAIGN CREATION MODAL                                        */}
